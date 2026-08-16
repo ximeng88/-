@@ -1,0 +1,1620 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>🏰 语文小英雄冒险记</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
+            background: linear-gradient(180deg, #87CEEB 0%, #E0F6FF 30%, #98FB98 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* ========== 微信提示层 ========== */
+        .wechat-tip {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.85);
+            z-index: 10000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            padding: 20px;
+        }
+
+        .wechat-tip.active {
+            display: flex;
+        }
+
+        .wechat-tip-content {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+            max-width: 350px;
+        }
+
+        .wechat-tip-content h3 {
+            color: #333;
+            font-size: 22px;
+            margin-bottom: 15px;
+        }
+
+        .wechat-tip-content p {
+            color: #666;
+            font-size: 16px;
+            line-height: 1.8;
+            margin-bottom: 20px;
+        }
+
+        .wechat-arrow {
+            font-size: 60px;
+            animation: arrowBounce 1s infinite;
+            margin: 20px 0;
+        }
+
+        @keyframes arrowBounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        /* ========== 主游戏容器 ========== */
+        #game-container {
+            max-width: 850px;
+            margin: 0 auto;
+            padding: 10px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ========== 顶部英雄状态栏 ========== */
+        .hero-status {
+            background: linear-gradient(135deg, #FFD700, #FF8C00);
+            border-radius: 15px;
+            padding: 12px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 5px 15px rgba(255, 140, 0, 0.3);
+            border: 3px solid #FFF;
+            margin-bottom: 15px;
+        }
+
+        .hero-avatar {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #FF6B6B, #FFE66D);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+            border: 3px solid white;
+            flex-shrink: 0;
+        }
+
+        .hero-info h2 {
+            color: #8B4513;
+            font-size: 18px;
+        }
+
+        .hero-level {
+            background: #FFF;
+            padding: 3px 10px;
+            border-radius: 10px;
+            color: #FF8C00;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .xp-bar-container {
+            width: 120px;
+            height: 15px;
+            background: rgba(255,255,255,0.5);
+            border-radius: 8px;
+            overflow: hidden;
+            margin-top: 5px;
+            border: 2px solid white;
+        }
+
+        .xp-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #00FF7F, #00CED1);
+            border-radius: 8px;
+            transition: width 0.5s ease;
+            width: 0%;
+        }
+
+        .stats {
+            display: flex;
+            gap: 10px;
+        }
+
+        .stat-item {
+            text-align: center;
+            background: rgba(255,255,255,0.9);
+            padding: 5px 10px;
+            border-radius: 10px;
+            color: #8B4513;
+            font-size: 12px;
+        }
+
+        .stat-item .number {
+            font-size: 18px;
+            font-weight: bold;
+            color: #FF6B6B;
+        }
+
+        /* ========== 关卡地图 ========== */
+        .map-title {
+            text-align: center;
+            color: #8B4513;
+            font-size: 22px;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 4px rgba(255,255,255,0.8);
+        }
+
+        .level-path {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: center;
+            padding: 10px 0;
+        }
+
+        .level-node {
+            width: 100%;
+            max-width: 500px;
+            background: linear-gradient(135deg, #FFF, #F0F8FF);
+            border-radius: 15px;
+            padding: 15px;
+            border: 3px solid;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .level-node.locked {
+            border-color: #CCC;
+            background: linear-gradient(135deg, #EEE, #DDD);
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .level-node.available {
+            border-color: #FFD700;
+            box-shadow: 0 3px 15px rgba(255, 215, 0, 0.3);
+        }
+
+        .level-node.completed {
+            border-color: #00FF7F;
+            background: linear-gradient(135deg, #F0FFF0, #E0FFE0);
+        }
+
+        .level-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+            flex-shrink: 0;
+        }
+
+        .level-node.available .level-icon {
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .level-node.completed .level-icon {
+            background: linear-gradient(135deg, #00FF7F, #00CED1);
+        }
+
+        .level-node.locked .level-icon {
+            background: #CCC;
+        }
+
+        .level-info h3 {
+            color: #8B4513;
+            font-size: 16px;
+            margin-bottom: 3px;
+        }
+
+        .level-info p {
+            color: #666;
+            font-size: 12px;
+        }
+
+        .level-badge {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 24px;
+        }
+
+        .path-line {
+            width: 4px;
+            height: 20px;
+            background: linear-gradient(180deg, #FFD700, #FFA500);
+            border-radius: 2px;
+        }
+
+        /* ========== 游戏弹窗 ========== */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 10px;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .game-modal {
+            background: linear-gradient(135deg, #FFF, #FFF8DC);
+            border-radius: 20px;
+            padding: 20px;
+            max-width: 500px;
+            width: 100%;
+            max-height: 85vh;
+            overflow-y: auto;
+            border: 4px solid #FFD700;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            position: relative;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* ========== 关闭按钮 ========== */
+        .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 35px;
+            height: 35px;
+            background: linear-gradient(135deg, #FF6B6B, #FF8E8E);
+            border: none;
+            border-radius: 50%;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(255, 107, 107, 0.4);
+            z-index: 10;
+        }
+
+        /* ========== 战斗画面 ========== */
+        .battle-arena {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 10px;
+            background: linear-gradient(135deg, #FFE4E1, #FFF0F5);
+            border-radius: 15px;
+            margin: 15px 0;
+        }
+
+        .fighter {
+            text-align: center;
+            flex: 1;
+        }
+
+        .fighter-emoji {
+            font-size: 50px;
+        }
+
+        .hp-bar {
+            width: 80px;
+            height: 15px;
+            background: #DDD;
+            border-radius: 8px;
+            overflow: hidden;
+            margin: 8px auto;
+            border: 2px solid #FFF;
+        }
+
+        .hp-fill {
+            height: 100%;
+            border-radius: 8px;
+            transition: width 0.5s ease;
+        }
+
+        .hero-hp { background: linear-gradient(90deg, #00FF7F, #00CED1); }
+        .boss-hp { background: linear-gradient(90deg, #FF6B6B, #FF8C00); }
+
+        .vs-text {
+            font-size: 30px;
+            font-weight: bold;
+            color: #FFD700;
+        }
+
+        .fighter-name {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        /* ========== 题目区域 ========== */
+        .question-area {
+            background: #FFF;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 3px solid #87CEEB;
+        }
+
+        .question-text {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 15px;
+            line-height: 1.6;
+        }
+
+        .options {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }
+
+        .option-btn {
+            padding: 15px 20px;
+            border: 3px solid #87CEEB;
+            border-radius: 12px;
+            background: #F0F8FF;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #333;
+            width: 100%;
+            -webkit-appearance: none;
+        }
+
+        .option-btn:active {
+            transform: scale(0.98);
+        }
+
+        .option-btn.correct {
+            background: #00FF7F;
+            border-color: #00FF7F;
+            color: white;
+        }
+
+        .option-btn.wrong {
+            background: #FF6B6B;
+            border-color: #FF6B6B;
+            color: white;
+        }
+
+        .option-btn:disabled {
+            opacity: 0.8;
+        }
+
+        /* ========== 拼音拖拽 - 微信优化版（点击式） ========== */
+        .pinyin-source {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin: 15px 0;
+            padding: 10px;
+            background: #F9F9F9;
+            border-radius: 10px;
+        }
+
+        .pinyin-tile {
+            padding: 12px 20px;
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            border-radius: 12px;
+            font-size: 20px;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 3px 10px rgba(255, 215, 0, 0.3);
+            transition: all 0.2s;
+            border: 3px solid transparent;
+            -webkit-appearance: none;
+        }
+
+        .pinyin-tile:active {
+            transform: scale(0.95);
+        }
+
+        .pinyin-tile.selected {
+            border-color: #FF6B6B;
+            box-shadow: 0 0 15px rgba(255, 107, 107, 0.5);
+        }
+
+        .pinyin-targets {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .pinyin-target-item {
+            text-align: center;
+        }
+
+        .pinyin-target-item .char {
+            font-size: 32px;
+            margin-bottom: 8px;
+        }
+
+        .drop-zone {
+            min-width: 90px;
+            min-height: 50px;
+            border: 3px dashed #CCC;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            color: #999;
+            background: #F9F9F9;
+            cursor: pointer;
+            transition: all 0.3s;
+            padding: 10px;
+        }
+
+        .drop-zone.active {
+            border-color: #FFD700;
+            background: #FFFACD;
+        }
+
+        .drop-zone.filled {
+            border-style: solid;
+            border-color: #87CEEB;
+            background: #F0F8FF;
+            color: #333;
+            font-weight: bold;
+        }
+
+        .drop-zone.correct {
+            border-color: #00FF7F;
+            background: #F0FFF0;
+            color: #00FF7F;
+        }
+
+        .drop-zone.wrong {
+            border-color: #FF6B6B;
+            background: #FFE4E1;
+            color: #FF6B6B;
+        }
+
+        /* ========== 排序题 - 微信优化版 ========== */
+        .order-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .order-item {
+            padding: 15px;
+            background: linear-gradient(135deg, #F0F8FF, #E6F3FF);
+            border: 3px solid #87CEEB;
+            border-radius: 12px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .order-item:active {
+            transform: scale(0.98);
+        }
+
+        .order-item.selected {
+            border-color: #FFD700;
+            background: linear-gradient(135deg, #FFFACD, #FFF8DC);
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+        }
+
+        .order-num {
+            width: 30px;
+            height: 30px;
+            background: #87CEEB;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        /* ========== 填空题 ========== */
+        .fill-input {
+            width: 100%;
+            padding: 15px;
+            font-size: 18px;
+            border-radius: 12px;
+            border: 3px solid #87CEEB;
+            text-align: center;
+            margin: 15px 0;
+            -webkit-appearance: none;
+        }
+
+        /* ========== 按钮 ========== */
+        .btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 25px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin: 10px 5px;
+            -webkit-appearance: none;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            color: white;
+            box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #00FF7F, #00CED1);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #87CEEB, #5CADAD);
+            color: white;
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+        }
+
+        /* ========== 下一题按钮 ========== */
+        .next-btn {
+            display: block;
+            margin: 20px auto 0;
+            padding: 15px 50px;
+            background: linear-gradient(135deg, #00FF7F, #00CED1);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 5px 20px rgba(0, 255, 127, 0.4);
+            animation: popIn 0.5s ease;
+            -webkit-appearance: none;
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0); }
+            70% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        /* ========== 反馈区域 ========== */
+        .feedback-area {
+            margin-top: 15px;
+            text-align: center;
+        }
+
+        .feedback-msg {
+            padding: 15px;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            animation: slideIn 0.5s ease;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(-20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .feedback-msg.correct {
+            background: #F0FFF0;
+            color: #00AA00;
+            border: 2px solid #00FF7F;
+        }
+
+        .feedback-msg.wrong {
+            background: #FFE4E1;
+            color: #CC0000;
+            border: 2px solid #FF6B6B;
+        }
+
+        /* ========== 进度条 ========== */
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #EEE;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #FFD700, #FFA500);
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        /* ========== 奖励画面 ========== */
+        .reward-screen {
+            text-align: center;
+            padding: 20px 0;
+        }
+
+        .reward-emoji {
+            font-size: 80px;
+            animation: spin 1s ease;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg) scale(0); }
+            100% { transform: rotate(360deg) scale(1); }
+        }
+
+        .reward-title {
+            font-size: 24px;
+            color: #FFD700;
+            margin: 15px 0;
+            font-weight: bold;
+        }
+
+        .star-display {
+            font-size: 40px;
+            margin: 15px 0;
+        }
+
+        .reward-details {
+            background: #F9F9F9;
+            border-radius: 15px;
+            padding: 15px;
+            margin: 15px 0;
+            font-size: 16px;
+            color: #666;
+        }
+
+        .reward-details p {
+            margin: 8px 0;
+        }
+
+        /* ========== 连击显示 ========== */
+        .combo-display {
+            position: fixed;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 60px;
+            font-weight: bold;
+            color: #FFD700;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.3);
+            pointer-events: none;
+            z-index: 9999;
+            animation: comboAnim 1s ease forwards;
+        }
+
+        @keyframes comboAnim {
+            0% { transform: translate(-50%, -50%) scale(0); }
+            50% { transform: translate(-50%, -50%) scale(1.3); }
+            100% { transform: translate(-50%, -50%) scale(1) translateY(-80px); opacity: 0; }
+        }
+
+        /* ========== 粒子特效 ========== */
+        .particle {
+            position: fixed;
+            pointer-events: none;
+            animation: particleFloat 1.5s ease-out forwards;
+            z-index: 9998;
+            font-size: 30px;
+        }
+
+        @keyframes particleFloat {
+            0% { transform: translate(0, 0) scale(1); opacity: 1; }
+            100% { transform: translate(var(--px), var(--py)) scale(0); opacity: 0; }
+        }
+
+        /* ========== 底部固定按钮区 ========== */
+        .fixed-bottom {
+            position: sticky;
+            bottom: 0;
+            background: linear-gradient(transparent, #FFF 30%);
+            padding: 15px 0 5px;
+            margin-top: 10px;
+        }
+
+        /* ========== 提示文字 ========== */
+        .hint-text {
+            text-align: center;
+            color: #999;
+            font-size: 14px;
+            margin: 10px 0;
+        }
+
+        /* ========== 全屏按钮（用于微信） ========== */
+        .fullscreen-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            border: none;
+            border-radius: 50%;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body>
+    <!-- 微信提示层 -->
+    <div class="wechat-tip" id="wechat-tip">
+        <div class="wechat-tip-content">
+            <h3>📱 微信浏览器提示</h3>
+            <p>为了获得最佳游戏体验，建议点击右上角<br>【⋮】→【在浏览器打开】</p>
+            <div class="wechat-arrow">👆</div>
+            <button class="btn btn-primary" onclick="hideWechatTip()">继续在微信玩</button>
+        </div>
+    </div>
+
+    <div id="game-container">
+        <!-- 英雄状态栏 -->
+        <div class="hero-status">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div class="hero-avatar">🧙‍♂️</div>
+                <div>
+                    <h2>语文小英雄</h2>
+                    <div class="hero-level">⭐ 等级 <span id="hero-level">1</span></div>
+                    <div class="xp-bar-container">
+                        <div class="xp-bar" id="xp-bar"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="number" id="stars-count">0</div>
+                    <div>⭐星星</div>
+                </div>
+                <div class="stat-item">
+                    <div class="number" id="coins-count">0</div>
+                    <div>🪙金币</div>
+                </div>
+                <div class="stat-item">
+                    <div class="number" id="streak-count">0</div>
+                    <div>🔥连击</div>
+                </div>
+            </div>
+        </div>
+
+        <h2 class="map-title">📚 一年级下册冒险地图</h2>
+        <div class="level-path" id="level-path"></div>
+    </div>
+
+    <!-- 游戏弹窗 -->
+    <div class="modal-overlay" id="game-modal">
+        <div class="game-modal" id="modal-content"></div>
+    </div>
+
+    <!-- 全屏按钮 -->
+    <button class="fullscreen-btn" onclick="toggleFullscreen()" id="fullscreen-btn">⛶</button>
+
+    <script>
+        // ========== 检测微信环境 ==========
+        const isWechat = /MicroMessenger/i.test(navigator.userAgent);
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+
+        // 显示微信提示
+        if (isWechat) {
+            document.getElementById('wechat-tip').classList.add('active');
+        }
+
+        function hideWechatTip() {
+            document.getElementById('wechat-tip').classList.remove('active');
+        }
+
+        // ========== 全屏功能 ==========
+        function toggleFullscreen() {
+            const doc = document.documentElement;
+            if (!document.fullscreenElement) {
+                if (doc.requestFullscreen) {
+                    doc.requestFullscreen();
+                } else if (doc.webkitRequestFullscreen) {
+                    doc.webkitRequestFullscreen();
+                } else if (doc.msRequestFullscreen) {
+                    doc.msRequestFullscreen();
+                }
+                document.getElementById('fullscreen-btn').textContent = '⛶';
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                }
+            }
+        }
+
+        // iOS隐藏全屏按钮（不支持）
+        if (isIOS) {
+            document.getElementById('fullscreen-btn').style.display = 'none';
+        }
+
+        // ========== 游戏数据 ==========
+        const gameData = {
+            hero: {
+                level: 1,
+                xp: 0,
+                xpToNext: 100,
+                stars: 0,
+                coins: 0,
+                streak: 0,
+                maxStreak: 0,
+                unlockedLevels: [1],
+                completedLevels: [],
+                collection: []
+            },
+            levels: [
+                {
+                    id: 1,
+                    name: "识字城堡",
+                    icon: "🏰",
+                    boss: "👹",
+                    bossName: "生字大魔王",
+                    theme: "春天",
+                    description: "《春夏秋冬》《姓氏歌》",
+                    questions: [
+                        {
+                            type: "pinyin",
+                            text: "点击上面的拼音，再点击下面的方框，把拼音放到正确的汉字上",
+                            pairs: [
+                                { char: "春", pinyin: "chūn" },
+                                { char: "夏", pinyin: "xià" },
+                                { char: "秋", pinyin: "qiū" },
+                                { char: "冬", pinyin: "dōng" }
+                            ]
+                        },
+                        {
+                            type: "choice",
+                            text: "《姓氏歌》中，'什么李？____李'",
+                            options: ["木子", "禾子", "本子", "米子"],
+                            answer: 0
+                        },
+                        {
+                            type: "choice",
+                            text: "春风吹，夏雨落，秋霜____，冬雪飘",
+                            options: ["降", "落", "下", "飞"],
+                            answer: 0
+                        }
+                    ]
+                },
+                {
+                    id: 2,
+                    name: "词语森林",
+                    icon: "🌲",
+                    boss: "🐺",
+                    bossName: "词语灰狼",
+                    theme: "词语搭配",
+                    description: "《小青蛙》《猜字谜》",
+                    questions: [
+                        {
+                            type: "choice",
+                            text: "河水清清天气____，小小青蛙大眼睛",
+                            options: ["晴", "清", "青", "情"],
+                            answer: 0
+                        },
+                        {
+                            type: "choice",
+                            text: "'言'来互相尊重，'心'至令人感动，'日'出万里无云，'水'到纯净透明。这是什么字？",
+                            options: ["请", "清", "晴", "青"],
+                            answer: 3
+                        },
+                        {
+                            type: "fill",
+                            text: "绿的喜欢及时____，红的最怕水来攻",
+                            answer: "雨"
+                        }
+                    ]
+                },
+                {
+                    id: 3,
+                    name: "句子山谷",
+                    icon: "⛰️",
+                    boss: "🐉",
+                    bossName: "句子巨龙",
+                    theme: "句子练习",
+                    description: "《吃水不忘挖井人》《我多想去看看》",
+                    questions: [
+                        {
+                            type: "choice",
+                            text: "《吃水不忘挖井人》讲的是谁的故事？",
+                            options: ["周恩来", "毛泽东", "邓小平", "朱德"],
+                            answer: 1
+                        },
+                        {
+                            type: "choice",
+                            text: "遥远的北京城，有一座雄伟的____",
+                            options: ["故宫", "长城", "天安门", "天坛"],
+                            answer: 2
+                        },
+                        {
+                            type: "order",
+                            text: "点击句子，按正确顺序排列",
+                            items: ["我多想去看看", "妈妈告诉我", "沿着弯弯的小路", "就会走出天山"],
+                            correctOrder: [1, 2, 3, 0]
+                        }
+                    ]
+                },
+                {
+                    id: 4,
+                    name: "阅读海洋",
+                    icon: "🌊",
+                    boss: "🦈",
+                    bossName: "阅读鲨鱼",
+                    theme: "阅读理解",
+                    description: "《一个接一个》《四个太阳》",
+                    questions: [
+                        {
+                            type: "choice",
+                            text: "《一个接一个》中，'我'玩踩影子时，大人叫'我'做什么？",
+                            options: ["吃饭", "睡觉", "回家", "上学"],
+                            answer: 2
+                        },
+                        {
+                            type: "choice",
+                            text: "《四个太阳》中，夏天的太阳是什么颜色的？",
+                            options: ["红色", "绿色", "金黄色", "彩色"],
+                            answer: 1
+                        },
+                        {
+                            type: "fill",
+                            text: "我画了个____的太阳，挂在夏天的天空",
+                            answer: "绿绿"
+                        }
+                    ]
+                },
+                {
+                    id: 5,
+                    name: "古诗巅峰",
+                    icon: "🏔️",
+                    boss: "👺",
+                    bossName: "古诗妖王",
+                    theme: "古诗背诵",
+                    description: "《静夜思》《池上》《小池》",
+                    questions: [
+                        {
+                            type: "choice",
+                            text: "《静夜思》的作者是谁？",
+                            options: ["杜甫", "李白", "白居易", "王维"],
+                            answer: 1
+                        },
+                        {
+                            type: "fill",
+                            text: "床前明月光，疑是地上____",
+                            answer: "霜"
+                        },
+                        {
+                            type: "choice",
+                            text: "《小池》中，'小荷才露____，早有蜻蜓立上头'",
+                            options: ["尖尖角", "圆圆角", "小小角", "弯弯角"],
+                            answer: 0
+                        },
+                        {
+                            type: "order",
+                            text: "点击诗句，按正确顺序排列《池上》",
+                            items: ["偷采白莲回", "小娃撑小艇", "浮萍一道开", "不解藏踪迹"],
+                            correctOrder: [1, 0, 3, 2]
+                        }
+                    ]
+                },
+                {
+                    id: 6,
+                    name: "写作神殿",
+                    icon: "🏛️",
+                    boss: "🧛",
+                    bossName: "写作吸血鬼",
+                    theme: "看图写话",
+                    description: "口语交际和写话练习",
+                    questions: [
+                        {
+                            type: "choice",
+                            text: "邀请同学一起玩游戏，应该怎么说？",
+                            options: [
+                                "你必须跟我玩！",
+                                "请你和我一起玩，好吗？",
+                                "喂，来玩！",
+                                "你过来！"
+                            ],
+                            answer: 1
+                        },
+                        {
+                            type: "choice",
+                            text: "《请你帮个忙》中，向别人求助时要注意什么？",
+                            options: [
+                                "大声喊叫",
+                                "使用礼貌用语",
+                                "直接命令",
+                                "不用说话"
+                            ],
+                            answer: 1
+                        },
+                        {
+                            type: "fill",
+                            text: "我的愿望是____（写出你的愿望）",
+                            answer: "（开放答案）"
+                        }
+                    ]
+                }
+            ]
+        };
+
+        // ========== 初始化 ==========
+        function init() {
+            renderLevels();
+            updateStatus();
+            
+            // 防止微信下拉回弹
+            document.body.addEventListener('touchmove', function(e) {
+                if (e.target.closest('.game-modal')) return;
+                e.preventDefault();
+            }, { passive: false });
+        }
+
+        // 渲染关卡
+        function renderLevels() {
+            const path = document.getElementById('level-path');
+            path.innerHTML = '';
+            
+            gameData.levels.forEach((level, index) => {
+                if (index > 0) {
+                    const line = document.createElement('div');
+                    line.className = 'path-line';
+                    path.appendChild(line);
+                }
+                
+                const node = document.createElement('div');
+                node.className = 'level-node';
+                
+                if (gameData.hero.completedLevels.includes(level.id)) {
+                    node.classList.add('completed');
+                } else if (gameData.hero.unlockedLevels.includes(level.id)) {
+                    node.classList.add('available');
+                } else {
+                    node.classList.add('locked');
+                }
+                
+                node.innerHTML = `
+                    <div class="level-icon">${level.icon}</div>
+                    <div class="level-info">
+                        <h3>第${level.id}关：${level.name}</h3>
+                        <p>🎯 ${level.description}</p>
+                        <p>👑 ${level.bossName}</p>
+                    </div>
+                    <div class="level-badge">
+                        ${gameData.hero.completedLevels.includes(level.id) ? '✅' : 
+                          gameData.hero.unlockedLevels.includes(level.id) ? '⚔️' : '🔒'}
+                    </div>
+                `;
+                
+                if (!node.classList.contains('locked')) {
+                    node.addEventListener('click', () => startLevel(level));
+                }
+                
+                path.appendChild(node);
+            });
+        }
+
+        function updateStatus() {
+            document.getElementById('hero-level').textContent = gameData.hero.level;
+            document.getElementById('stars-count').textContent = gameData.hero.stars;
+            document.getElementById('coins-count').textContent = gameData.hero.coins;
+            document.getElementById('streak-count').textContent = gameData.hero.streak;
+            
+            const xpPercent = (gameData.hero.xp / gameData.hero.xpToNext) * 100;
+            document.getElementById('xp-bar').style.width = xpPercent + '%';
+        }
+
+        // ========== 关卡系统 ==========
+        let currentLevel = null;
+        let currentQuestion = 0;
+        let correctCount = 0;
+        let bossHp = 100;
+        let heroHp = 100;
+        let answered = false;
+        let selectedPinyin = null; // 当前选中的拼音
+
+        function startLevel(level) {
+            currentLevel = level;
+            currentQuestion = 0;
+            correctCount = 0;
+            bossHp = 100;
+            heroHp = 100;
+            answered = false;
+            selectedPinyin = null;
+            showBattleScreen();
+        }
+
+        function showBattleScreen() {
+            const modal = document.getElementById('game-modal');
+            const content = document.getElementById('modal-content');
+            
+            content.innerHTML = `
+                <button class="close-btn" onclick="closeModal()">✕</button>
+                <div style="text-align: center; padding-top: 10px;">
+                    <h2 style="color: #8B4513; font-size: 22px;">⚔️ 第${currentLevel.id}关：${currentLevel.name}</h2>
+                    <p style="color: #666; font-size: 14px;">主题：${currentLevel.theme}</p>
+                </div>
+                <div class="battle-arena">
+                    <div class="fighter">
+                        <div class="fighter-emoji">🧙‍♂️</div>
+                        <div class="hp-bar"><div class="hp-fill hero-hp" id="hero-hp" style="width: 100%"></div></div>
+                        <div class="fighter-name">语文小英雄</div>
+                    </div>
+                    <div class="vs-text">VS</div>
+                    <div class="fighter">
+                        <div class="fighter-emoji" style="animation: pulse 1s infinite;">${currentLevel.boss}</div>
+                        <div class="hp-bar"><div class="hp-fill boss-hp" id="boss-hp" style="width: 100%"></div></div>
+                        <div class="fighter-name">${currentLevel.bossName}</div>
+                    </div>
+                </div>
+                <div style="text-align: center;">
+                    <button class="btn btn-primary" onclick="showQuestion()">🗡️ 开始挑战！</button>
+                </div>
+            `;
+            
+            modal.classList.add('active');
+        }
+
+        // ========== 显示题目（微信优化版） ==========
+        function showQuestion() {
+            answered = false;
+            selectedPinyin = null;
+            const question = currentLevel.questions[currentQuestion];
+            const content = document.getElementById('modal-content');
+            const progress = ((currentQuestion) / currentLevel.questions.length) * 100;
+            
+            let html = `
+                <button class="close-btn" onclick="closeModal()">✕</button>
+                <div style="text-align: center; padding-top: 10px;">
+                    <h2 style="color: #8B4513; font-size: 20px;">📝 题目 ${currentQuestion + 1}/${currentLevel.questions.length}</h2>
+                    <div class="progress-bar"><div class="progress-fill" style="width: ${progress}%"></div></div>
+                </div>
+                <div class="question-area">
+                    <div class="question-text">${question.text}</div>
+            `;
+            
+            if (question.type === 'choice') {
+                html += `<div class="options">`;
+                question.options.forEach((opt, i) => {
+                    html += `<button class="option-btn" onclick="checkChoice(${i})" id="opt-${i}">${opt}</button>`;
+                });
+                html += `</div>`;
+                
+            } else if (question.type === 'fill') {
+                html += `
+                    <input type="text" class="fill-input" id="fill-answer" placeholder="请输入答案" 
+                        onkeypress="if(event.key==='Enter') checkFill()">
+                    <div style="text-align: center;">
+                        <button class="btn btn-primary" onclick="checkFill()">✅ 确认答案</button>
+                    </div>
+                `;
+                
+            } else if (question.type === 'pinyin') {
+                // 微信优化：点击式拼音匹配
+                html += `<div class="pinyin-source" id="pinyin-source">`;
+                const shuffled = [...question.pairs].sort(() => Math.random() - 0.5);
+                shuffled.forEach((pair, i) => {
+                    html += `<div class="pinyin-tile" data-pinyin="${pair.pinyin}" onclick="selectPinyin(this)" id="pinyin-${i}">${pair.pinyin}</div>`;
+                });
+                html += `</div>`;
+                
+                html += `<p class="hint-text">👆 先点击上面的拼音，再点击下面的方框</p>`;
+                
+                html += `<div class="pinyin-targets">`;
+                const shuffledTargets = [...question.pairs].sort(() => Math.random() - 0.5);
+                shuffledTargets.forEach((pair, i) => {
+                    html += `
+                        <div class="pinyin-target-item">
+                            <div class="char">${pair.char}</div>
+                            <div class="drop-zone" data-char="${pair.char}" data-correct="${pair.pinyin}" onclick="placePinyin(this)">点击放这里</div>
+                        </div>
+                    `;
+                });
+                html += `</div>`;
+                
+                html += `<div style="text-align: center; margin-top: 15px;">
+                    <button class="btn btn-primary" onclick="checkPinyin()">✅ 确认答案</button>
+                </div>`;
+                
+            } else if (question.type === 'order') {
+                // 微信优化：点击交换式排序
+                html += `<p class="hint-text">👆 点击两个句子交换位置</p>`;
+                html += `<div class="order-container" id="order-container">`;
+                const shuffled = question.items.map((item, i) => ({item, original: i}))
+                    .sort(() => Math.random() - 0.5);
+                shuffled.forEach(({item, original}, i) => {
+                    html += `
+                        <div class="order-item" data-index="${original}" onclick="selectOrderItem(this)" id="order-${i}">
+                            <div class="order-num">${i + 1}</div>
+                            <div>${item}</div>
+                        </div>
+                    `;
+                });
+                html += `</div>`;
+                html += `<div style="text-align: center;">
+                    <button class="btn btn-primary" onclick="checkOrder()">✅ 确认顺序</button>
+                </div>`;
+            }
+            
+            html += `<div class="feedback-area" id="feedback-area"></div>`;
+            html += `</div>`;
+            
+            content.innerHTML = html;
+        }
+
+        // ========== 选择题 ==========
+        function checkChoice(selected) {
+            if (answered) return;
+            answered = true;
+            
+            const question = currentLevel.questions[currentQuestion];
+            const isCorrect = selected === question.answer;
+            
+            // 显示对错
+            document.querySelectorAll('.option-btn').forEach((btn, i) => {
+                btn.disabled = true;
+                if (i === question.answer) {
+                    btn.classList.add('correct');
+                } else if (i === selected) {
+                    btn.classList.add('wrong');
+                }
+            });
+            
+            showFeedback(isCorrect);
+        }
+
+        // ========== 填空题 ==========
+        function checkFill() {
+            if (answered) return;
+            
+            const input = document.getElementById('fill-answer');
+            const answer = input.value.trim();
+            
+            if (!answer) {
+                alert('请先输入答案！');
+                return;
+            }
+            
+            answered = true;
+            const question = currentLevel.questions[currentQuestion];
+            const isCorrect = answer === question.answer || question.answer.includes('（');
+            
+            input.style.borderColor = isCorrect ? '#00FF7F' : '#FF6B6B';
+            input.disabled = true;
+            
+            showFeedback(isCorrect);
+        }
+
+        // ========== 拼音题 - 点击式（微信优化） ==========
+        function selectPinyin(element) {
+            if (answered) return;
+            
+            // 移除其他选中状态
+            document.querySelectorAll('.pinyin-tile').forEach(t => t.classList.remove('selected'));
+            
+            // 选中当前
+            element.classList.add('selected');
+            selectedPinyin = element.dataset.pinyin;
+        }
+
+        function placePinyin(element) {
+            if (answered || !selectedPinyin) {
+                if (!selectedPinyin) alert('请先点击选择一个拼音！');
+                return;
+            }
+            
+            element.textContent = selectedPinyin;
+            element.dataset.current = selectedPinyin;
+            element.classList.add('filled');
+            
+            // 清除选中
+            document.querySelectorAll('.pinyin-tile').forEach(t => t.classList.remove('selected'));
+            selectedPinyin = null;
+        }
+
+        function checkPinyin() {
+            if (answered) return;
+            
+            const zones = document.querySelectorAll('.drop-zone');
+            let allFilled = true;
+            let allCorrect = true;
+            
+            zones.forEach(zone => {
+                const current = zone.dataset.current;
+                const correct = zone.dataset.correct;
+                
+                if (!current) {
+                    allFilled = false;
+                } else if (current !== correct) {
+                    allCorrect = false;
+                    zone.classList.add('wrong');
+                } else {
+                    zone.classList.add('correct');
+                }
+            });
+            
+            if (!allFilled) {
+                alert('请把所有拼音放到正确的位置！');
+                return;
+            }
+            
+            answered = true;
+            showFeedback(allCorrect);
+        }
+
+        // ========== 排序题 - 点击交换式（微信优化） ==========
+        let selectedOrderItem = null;
+
+        function selectOrderItem(element) {
+            if (answered) return;
+            
+            if (!selectedOrderItem) {
+                // 第一次点击，选中
+                selectedOrderItem = element;
+                element.classList.add('selected');
+            } else if (selectedOrderItem === element) {
+                // 点击同一个，取消选中
+                element.classList.remove('selected');
+                selectedOrderItem = null;
+            } else {
+                // 第二次点击，交换
+                const parent = element.parentNode;
+                const next1 = selectedOrderItem.nextSibling;
+                const next2 = element.nextSibling;
+                
+                parent.insertBefore(selectedOrderItem, next2);
+                parent.insertBefore(element, next1);
+                
+                // 更新序号
+                document.querySelectorAll('.order-item').forEach((item, i) => {
+                    item.querySelector('.order-num').textContent = i + 1;
+                });
+                
+                selectedOrderItem.classList.remove('selected');
+                selectedOrderItem = null;
+            }
+        }
+
+        function checkOrder() {
+            if (answered) return;
+            
+            const items = document.querySelectorAll('.order-item');
+            const question = currentLevel.questions[currentQuestion];
+            
+            let isCorrect = true;
+            items.forEach((item, i) => {
+                if (parseInt(item.dataset.index) !== question.correctOrder[i]) {
+                    isCorrect = false;
+                }
+            });
+            
+            answered = true;
+            showFeedback(isCorrect);
+        }
+
+        // ========== 显示反馈和下一题 ==========
+        function showFeedback(isCorrect) {
+            const feedbackArea = document.getElementById('feedback-area');
+            
+            // 处理战斗
+            if (isCorrect) {
+                correctCount++;
+                gameData.hero.streak++;
+                const damage = 25 + (gameData.hero.streak * 5);
+                bossHp = Math.max(0, bossHp - damage);
+                
+                if (gameData.hero.streak >= 3) {
+                    showCombo(gameData.hero.streak);
+                }
+                createParticles('⭐', 8);
+            } else {
+                gameData.hero.streak = 0;
+                heroHp = Math.max(0, heroHp - 15);
+                createParticles('💔', 5);
+            }
+            
+            // 更新血条
+            const bossBar = document.getElementById('boss-hp');
+            const heroBar = document.getElementById('hero-hp');
+            if (bossBar) bossBar.style.width = bossHp + '%';
+            if (heroBar) heroBar.style.width = heroHp + '%';
+            
+            updateStatus();
+            
+            // 显示反馈
+            feedbackArea.innerHTML = `
+                <div class="feedback-msg ${isCorrect ? 'correct' : 'wrong'}">
+                    ${isCorrect ? '🎉 回答正确！太棒了！' : '😢 回答错误，别灰心！'}
+                </div>
+            `;
+            
+            // 显示下一题按钮
+            const nextBtn = document.createElement('button');
+            nextBtn.className = 'next-btn';
+            
+            const isLastQuestion = currentQuestion + 1 >= currentLevel.questions.length;
+            const canWin = bossHp <= 0 || (isLastQuestion && correctCount >= Math.ceil(currentLevel.questions.length / 2));
+            const canLose = heroHp <= 0;
+            
+            if (canWin) {
+                nextBtn.textContent = '🏆 领取奖励！';
+                nextBtn.onclick = () => victory();
+            } else if (canLose) {
+                nextBtn.textContent = '😢 挑战失败';
+                nextBtn.style.background = 'linear-gradient(135deg, #FF6B6B, #FF8E8E)';
+                nextBtn.onclick = () => defeat();
+            } else if (isLastQuestion) {
+                nextBtn.textContent = '⚔️ 查看结果';
+                nextBtn.onclick = () => {
+                    if (correctCount >= Math.ceil(currentLevel.questions.length / 2)) {
+                        victory();
+                    } else {
+                        defeat();
+                    }
+                };
+            } else {
+                nextBtn.textContent = '⏭️ 下一题';
+                nextBtn.onclick = () => {
+                    currentQuestion++;
+                    showQuestion();
+                };
+            }
+            
+            feedbackArea.appendChild(nextBtn);
+        }
+
+        // ========== 连击和特效 ==========
+        function showCombo(count) {
+            const combo = document.createElement('div');
+            combo.className = 'combo-display';
+            combo.textContent = `${count}连击！🔥`;
+            document.body.appendChild(combo);
+            setTimeout(() => combo.remove(), 1000);
+        }
+
+        function createParticles(emoji, count) {
+            for (let i = 0; i < count; i++) {
+                setTimeout(() => {
+                    const p = document.createElement('div');
+                    p.className = 'particle';
+                    p.textContent = emoji;
+                    p.style.left = (Math.random() * window.innerWidth) + 'px';
+                    p.style.top = (Math.random() * window.innerHeight * 0.5 + window.innerHeight * 0.3) + 'px';
+                    p.style.setProperty('--px', (Math.random() - 0.5) * 150 + 'px');
+                    p.style.setProperty('--py', (Math.random() - 0.5) * 150 + 'px');
+                    document.body.appendChild(p);
+                    setTimeout(() => p.remove(), 1500);
+                }, i * 100);
+            }
+        }
+
+        // ========== 胜利/失败 ==========
+        function victory() {
+            const content = document.getElementById('modal-content');
+            
+            const stars = correctCount === currentLevel.questions.length ? 3 : 
+                         correctCount >= Math.ceil(currentLevel.questions.length * 0.7) ? 2 : 1;
+            const coins = stars * 10 + gameData.hero.streak * 2;
+            const xp = stars * 20;
+            
+            gameData.hero.stars += stars;
+            gameData.hero.coins += coins;
+            gameData.hero.xp += xp;
+            
+            if (gameData.hero.xp >= gameData.hero.xpToNext) {
+                gameData.hero.level++;
+                gameData.hero.xp -= gameData.hero.xpToNext;
+                gameData.hero.xpToNext = Math.floor(gameData.hero.xpToNext * 1.5);
+            }
+            
+            if (!gameData.hero.completedLevels.includes(currentLevel.id)) {
+                gameData.hero.completedLevels.push(currentLevel.id);
+            }
+            
+            const nextLevel = currentLevel.id + 1;
+            if (nextLevel <= gameData.levels.length && !gameData.hero.unlockedLevels.includes(nextLevel)) {
+                gameData.hero.unlockedLevels.push(nextLevel);
+            }
+            
+            gameData.hero.streak = 0;
+            updateStatus();
+            
+            content.innerHTML = `
+                <button class="close-btn" onclick="closeModal(); renderLevels();">✕</button>
+                <div class="reward-screen">
+                    <div class="reward-emoji">🎉</div>
+                    <div class="reward-title">🎊 挑战成功！🎊</div>
+                    <div class="star-display">${'⭐'.repeat(stars)}${'☆'.repeat(3-stars)}</div>
+                    <div class="reward-details">
+                        <p>💰 获得金币：+${coins}</p>
+                        <p>✨ 获得经验：+${xp}</p>
+                        <p>🏆 当前等级：${gameData.hero.level}</p>
+                    </div>
+                    <button class="btn btn-success" onclick="closeModal(); renderLevels();">🎮 继续冒险</button>
+                </div>
+            `;
+            
+            createParticles('🎊', 10);
+            createParticles('⭐', 10);
+        }
+
+        function defeat() {
+            gameData.hero.streak = 0;
+            updateStatus();
+            
+            const content = document.getElementById('modal-content');
+            content.innerHTML = `
+                <button class="close-btn" onclick="closeModal()">✕</button>
+                <div class="reward-screen">
+                    <div class="reward-emoji">😢</div>
+                    <div class="reward-title" style="color: #999;">挑战失败...</div>
+                    <p style="color: #666; margin: 15px 0;">别灰心！再试一次吧！💪</p>
+                    <button class="btn btn-primary" onclick="startLevel(currentLevel)">🔄 重新挑战</button>
+                    <button class="btn btn-secondary" onclick="closeModal(); renderLevels();">📖 回去复习</button>
+                </div>
+            `;
+        }
+
+        function closeModal() {
+            document.getElementById('game-modal').classList.remove('active');
+        }
+
+        // 启动
+        init();
+    </script>
+</body>
+</html>
